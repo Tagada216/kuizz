@@ -1,23 +1,27 @@
-import { reactive } from "vue";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
+import { ref, onUnmounted } from "vue";
 
-export const state = reactive({
-  connected: false,
-  fooEvents: [],
-  barEvents: [],
-});
+// Initialize socket connection
+const socket: Socket = io("http://localhost:3000");
 
-const URL =
-  process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000";
+// Function to listen to server event
+export function useSocketOn(eventName: string) {
+  const data = ref<any>(null);
 
-const socket = io(URL);
+  // Create event listener
+  socket.on(eventName, (update: any) => {
+    data.value = "We got a signal !";
+  });
 
-let connected: string = "";
-socket.on("connect", () => {
-  connected = "We got a signal!";
-  state.connected = true;
-});
+  // Remove event listener when component unmounts
+  onUnmounted(() => {
+    socket.off(eventName);
+  });
 
-socket.on("disconnect", () => {
-  state.connected = false;
-});
+  return data;
+}
+
+// Function to emit event to server
+export function useSocketEmit(eventName: string, payload?: any) {
+  socket.emit(eventName, payload);
+}
